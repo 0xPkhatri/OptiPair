@@ -1,2 +1,3 @@
 # OptiPair
-conentrate liquidity for defi option strikes
+
+concentrate liquidity for defi option strikes
