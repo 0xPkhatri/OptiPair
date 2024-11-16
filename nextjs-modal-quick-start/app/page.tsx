@@ -64,7 +64,6 @@ function App() {
   const [liquidityAmount, setLiquidityAmount] = useState("");
   const [atmStrike, setAtmStrike] = useState("");
   const [otmStrike, setOtmStrike] = useState("");
-  const [lotsize, setLotsize] = useState("");
   const [premium, setPremium] = useState("");
   const [data, setData] = useState({
     lowerStrike: 0,
@@ -162,6 +161,29 @@ function App() {
     }
   };
 
+  const removeLiquidity = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+
+    const liquidity = parseFloat(liquidityAmount);
+    if (isNaN(liquidity) || liquidity <= 0) {
+      alert("Please enter a valid liquidity amount to remove.");
+      return;
+    }
+
+    try {
+      uiConsole("Removing Liquidity...");
+      // Example blockchain call to remove liquidity
+      const txReceipt = await RPC.removeLiquidity(provider, liquidity);
+      uiConsole(txReceipt);
+    } catch (error) {
+      console.error("Error removing liquidity: ", error);
+      alert("Failed to remove liquidity");
+    }
+  };
+
   const getUserInfo = async () => {
     // IMP START - Get User Information
     const user = await web3auth.getUserInfo();
@@ -189,12 +211,12 @@ function App() {
 
   const loggedInView = (
     <>
-      <div className="flex">
-        {/* <div>
+      <div className="flex-container">
+        <div>
           <button onClick={getUserInfo} className="card">
             Get User Info
           </button>
-        </div> */}
+        </div>
         <div>
           <button onClick={logout} className="card">
             Log Out
@@ -235,8 +257,7 @@ function App() {
       <div id="console" style={{ whiteSpace: "pre-line" }}>
         <p style={{ whiteSpace: "pre-line" }}></p>
       </div>
-      {/* <div>start main here</div> */}
-      <div className="text-sm mb-6">Option voletility premium trading</div>
+      <div>start main here</div>
       <div className="container mx-auto p-6">
         <div className="flex flex-wrap gap-4">
           {/* Left Panel - Strike Selection */}
@@ -333,7 +354,7 @@ function App() {
 
         {/* Add Liquidity Section */}
         <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-4">Add Liquidity</h2>
+          <h2 className="text-2xl font-bold mb-4">Add/Remove Liquidity</h2>
           <div className="mb-4">
             <label
               className="block text-gray-700 font-semibold mb-2"
@@ -356,10 +377,14 @@ function App() {
           >
             Add Liquidity
           </button>
+          <button
+            onClick={removeLiquidity}
+            className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 mt-4"
+          >
+            Remove Liquidity
+          </button>
         </div>
-        <div className="text-2xl font-bold mb-4 text-red-700 pt-4 mt-4">
-          Admin Section
-        </div>
+
         {/* Start Option Contract Section */}
         <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md">
           <h2 className="text-2xl font-bold mb-4">Start Option Contract</h2>
@@ -393,22 +418,6 @@ function App() {
               onChange={(e) => setOtmStrike(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
               placeholder="Enter OTM strike price"
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 font-semibold mb-2"
-              htmlFor="premium"
-            >
-              lotsize
-            </label>
-            <input
-              type="text"
-              id="premium"
-              value={premium}
-              onChange={(e) => setLotsize(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              placeholder="Enter Lots"
             />
           </div>
           <div className="mb-4">
