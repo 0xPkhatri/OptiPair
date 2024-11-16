@@ -58,6 +58,49 @@ const web3auth = new Web3Auth(web3AuthOptions);
 function App() {
   const [provider, setProvider] = useState<IProvider | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [strike1, setStrike1] = useState("");
+  const [strike2, setStrike2] = useState("");
+  const [optionType, setOptionType] = useState("call");
+  const [liquidityAmount, setLiquidityAmount] = useState("");
+  const [atmStrike, setAtmStrike] = useState("");
+  const [otmStrike, setOtmStrike] = useState("");
+  const [lotsize, setLotsize] = useState("");
+  const [premium, setPremium] = useState("");
+  const [data, setData] = useState({
+    lowerStrike: 0,
+    higherStrike: 0,
+    strikePrice: 3200, // Assuming some default values
+    atmStrikePrice: 3200,
+    far: 4000,
+    low: 3200,
+    lotQuantity: 100, // Default lot quantity
+  });
+
+  // Updated handler to simulate data fetching/updating
+  const handleStrikeChange = () => {
+    const strikePriceInput = parseFloat(strike1);
+    const lotQuantityInput = parseFloat(strike2);
+
+    if (isNaN(strikePriceInput) || isNaN(lotQuantityInput)) {
+      alert("Please enter valid numbers for strike price and lot quantity.");
+      return;
+    }
+
+    const strikeDiff = strikePriceInput - data.atmStrikePrice;
+    const rangeDiff = data.far - data.low;
+    const newLowerStrike = (strikeDiff / rangeDiff) * lotQuantityInput;
+
+    const strikeDifffar = data.far - strikePriceInput;
+    const newHigherStrike = (strikeDifffar / rangeDiff) * lotQuantityInput;
+
+    setData({
+      ...data,
+      strikePrice: strikePriceInput,
+      lotQuantity: lotQuantityInput,
+      lowerStrike: newLowerStrike,
+      higherStrike: newHigherStrike,
+    });
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -96,6 +139,29 @@ function App() {
     }
   };
 
+  const addLiquidity = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+
+    const liquidity = parseFloat(liquidityAmount);
+    if (isNaN(liquidity) || liquidity <= 0) {
+      alert("Please enter a valid liquidity amount.");
+      return;
+    }
+
+    try {
+      uiConsole("Adding Liquidity...");
+      // Example blockchain call to add liquidity
+      const txReceipt = await RPC.addLiquidity(provider, liquidity);
+      uiConsole(txReceipt);
+    } catch (error) {
+      console.error("Error adding liquidity: ", error);
+      alert("Failed to add liquidity");
+    }
+  };
+
   const getUserInfo = async () => {
     // IMP START - Get User Information
     const user = await web3auth.getUserInfo();
@@ -112,82 +178,23 @@ function App() {
     uiConsole("logged out");
   };
 
-  // IMP START - Blockchain Calls
-  // Check the RPC file for the implementation
-  const getAccounts = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const address = await RPC.getAccounts(provider);
-    uiConsole(address);
-  };
-
-  const getBalance = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const balance = await RPC.getBalance(provider);
-    uiConsole(balance);
-  };
-
-  const signMessage = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    const signedMessage = await RPC.signMessage(provider);
-    uiConsole(signedMessage);
-  };
-
-  const sendTransaction = async () => {
-    if (!provider) {
-      uiConsole("provider not initialized yet");
-      return;
-    }
-    uiConsole("Sending Transaction...");
-    const transactionReceipt = await RPC.sendTransaction(provider);
-    uiConsole(transactionReceipt);
-  };
-  // IMP END - Blockchain Calls
-
   function uiConsole(...args: any[]): void {
     const el = document.querySelector("#console>p");
     if (el) {
       el.innerHTML = JSON.stringify(args || {}, null, 2);
       console.log(...args);
+      console.log(el);
     }
   }
 
   const loggedInView = (
     <>
-      <div className="flex-container">
-        <div>
+      <div className="flex">
+        {/* <div>
           <button onClick={getUserInfo} className="card">
             Get User Info
           </button>
-        </div>
-        <div>
-          <button onClick={getAccounts} className="card">
-            Get Accounts
-          </button>
-        </div>
-        <div>
-          <button onClick={getBalance} className="card">
-            Get Balance
-          </button>
-        </div>
-        <div>
-          <button onClick={signMessage} className="card">
-            Sign Message
-          </button>
-        </div>
-        <div>
-          <button onClick={sendTransaction} className="card">
-            Send Transaction
-          </button>
-        </div>
+        </div> */}
         <div>
           <button onClick={logout} className="card">
             Log Out
@@ -215,7 +222,7 @@ function App() {
                   OptiPair
                 </div>
               </div>
-              <div className="border-2 border-red-700 absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
                 <div className="grid">
                   {loggedIn ? loggedInView : unloggedInView}
                 </div>
@@ -225,9 +232,227 @@ function App() {
         </nav>
       </div>
 
-      <div className="grid">{loggedIn ? loggedInView : unloggedInView}</div>
       <div id="console" style={{ whiteSpace: "pre-line" }}>
         <p style={{ whiteSpace: "pre-line" }}></p>
+      </div>
+      {/* <div>start main here</div> */}
+      <div className="text-sm mb-6">Option voletility premium trading</div>
+      <div className="container mx-auto p-6">
+        <div className="flex flex-wrap gap-4">
+          {/* Left Panel - Strike Selection */}
+          <h2 className="text-2xl font-bold mb-4">
+            Select Strike Prices Between atm 3200 and otm 4000
+          </h2>
+          <div className="flex">
+            <div className="w-full md:w-1/3 bg-gray-100 p-4 rounded-lg shadow-md">
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-semibold mb-2"
+                  htmlFor="optionType"
+                >
+                  Option Type
+                </label>
+                <select
+                  id="optionType"
+                  value={optionType}
+                  onChange={(e) => setOptionType(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                >
+                  <option value="call">Call</option>
+                  <option value="put">Put</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-semibold mb-2"
+                  htmlFor="strike1"
+                >
+                  Strike Price
+                </label>
+                <input
+                  type="text"
+                  id="strike1"
+                  value={strike1}
+                  onChange={(e) => setStrike1(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  placeholder="Enter strike price"
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 font-semibold mb-2"
+                  htmlFor="strike2"
+                >
+                  Lot quantity (1 ETH = 10lot)
+                </label>
+                <input
+                  type="text"
+                  id="strike2"
+                  value={strike2}
+                  onChange={(e) => setStrike2(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  placeholder="lot quantity"
+                />
+              </div>
+              <button
+                onClick={handleStrikeChange}
+                className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700"
+              >
+                Calculate
+              </button>
+            </div>
+
+            {/* Right Panel - Data Visualization */}
+            <div className="w-full md:w-2/3 bg-white p-4 rounded-lg shadow-md">
+              <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
+              {data ? (
+                <div className="grid gap-4">
+                  {/* Liquidity Metrics */}
+                  <div className="bg-green-100 p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold">Atm buy lots</h3>
+                    <p className="text-gray-700">
+                      {data.lowerStrike.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-blue-100 p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold">Otm buy lots</h3>
+                    <p className="text-gray-700">
+                      {data.higherStrike.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">
+                  Please select strike prices and click "Update Data" to view
+                  visualizations.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Add Liquidity Section */}
+        <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-4">Add Liquidity</h2>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-semibold mb-2"
+              htmlFor="liquidityAmount"
+            >
+              Liquidity Amount (in ETH)
+            </label>
+            <input
+              type="text"
+              id="liquidityAmount"
+              value={liquidityAmount}
+              onChange={(e) => setLiquidityAmount(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              placeholder="Enter liquidity amount"
+            />
+          </div>
+          <button
+            onClick={addLiquidity}
+            className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+          >
+            Add Liquidity
+          </button>
+        </div>
+        <div className="text-2xl font-bold mb-4 text-red-700 pt-4 mt-4">
+          Admin Section
+        </div>
+        {/* Start Option Contract Section */}
+        <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-4">Start Option Contract</h2>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-semibold mb-2"
+              htmlFor="atmStrike"
+            >
+              ATM Strike Price
+            </label>
+            <input
+              type="text"
+              id="atmStrike"
+              value={atmStrike}
+              onChange={(e) => setAtmStrike(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              placeholder="Enter ATM strike price"
+            />
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-semibold mb-2"
+              htmlFor="otmStrike"
+            >
+              OTM Strike Price
+            </label>
+            <input
+              type="text"
+              id="otmStrike"
+              value={otmStrike}
+              onChange={(e) => setOtmStrike(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              placeholder="Enter OTM strike price"
+            />
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-semibold mb-2"
+              htmlFor="premium"
+            >
+              lotsize
+            </label>
+            <input
+              type="text"
+              id="premium"
+              value={premium}
+              onChange={(e) => setLotsize(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              placeholder="Enter Lots"
+            />
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-gray-700 font-semibold mb-2"
+              htmlFor="premium"
+            >
+              Premium
+            </label>
+            <input
+              type="text"
+              id="premium"
+              value={premium}
+              onChange={(e) => setPremium(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              placeholder="Enter premium"
+            />
+          </div>
+          <button
+            onClick={() => uiConsole("Start Option Contract clicked")}
+            className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+          >
+            Start Option Contract
+          </button>
+        </div>
+
+        {/* Settlement Section */}
+        <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-4">Settlement</h2>
+          <div className="flex gap-4">
+            <button
+              onClick={() => uiConsole("Call Settlement clicked")}
+              className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700"
+            >
+              Call Settlement
+            </button>
+            <button
+              onClick={() => uiConsole("Put Settlement clicked")}
+              className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
+            >
+              Put Settlement
+            </button>
+          </div>
+        </div>
       </div>
 
       <footer className="footer">
@@ -242,21 +467,6 @@ function App() {
           <img src="https://vercel.com/button" alt="Deploy with Vercel" />
         </a>
       </footer>
-      <div class="w-6 h-6 bg-green-500 flex justify-center items-center text-white">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-      </div>
     </div>
   );
 }
