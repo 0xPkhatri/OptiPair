@@ -3,7 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+interface FtsoV2Interface {
+    function getFeedsById(bytes21[] calldata _feedIds) external payable returns (uint256[] memory _values, int8[] memory _decimals, uint64 _timestamp);
+}
 
 contract OptionAMM {
     struct Option {
@@ -17,8 +19,9 @@ contract OptionAMM {
     }
 
     Option[] public options;
-    IERC20 public usdc;  // USDC token contract interface
-    AggregatorV3Interface public priceFeed;
+    IERC20 public usdc=IERC20(0x8c4aDf16abcf78Ca4235023c29451370D2cEF222);  // USDC token contract interface
+    FtsoV2Interface public ftso;
+    bytes21 public constant ETH_USD_FEED_ID = bytes21(0x014554482f55534400000000000000000000000000);
     
     // Mapping from option ID to user address to lot count
     mapping(uint => mapping(address => uint)) public optionOwnership;
@@ -31,11 +34,13 @@ contract OptionAMM {
     event OptionPurchased(uint indexed optionId, address buyer, uint lotAmount, uint cost);
     event LiquidityAdded(address indexed provider, uint amount);
     event LiquidityRemoved(address indexed provider, uint amount);
+    event OptionSettled(uint indexed optionId, address indexed holder, uint payout, bool inTheMoney);
 
-    constructor(address _usdcAddress, address _priceFeedAddress) {
-        usdc = IERC20(_usdcAddress);
-        priceFeed = AggregatorV3Interface(_priceFeedAddress);
+    constructor( address _ftsoAddress) {
+        // usdc = IERC20(_usdcAddress);
+        ftso = FtsoV2Interface(_ftsoAddress);
     }
+    
     function createOption(uint _strikePrice, uint _lotSize, uint _premium, uint _expiry, bool _isCall) public {
         uint _k = _lotSize * _premium;
         options.push(Option({
@@ -112,15 +117,11 @@ contract OptionAMM {
         emit OptionSettled(optionId, msg.sender, payout, inTheMoney);
     }
 
-    function getLatestPrice() public view returns (int256) {
-        (
-            /*uint80 roundID*/,
-            int256 price,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
-            /*uint80 answeredInRound*/
-        ) = priceFeed.latestRoundData();
-        return price;
+    function getLatestPrice() public payable returns (int256) {
+        bytes21[] memory feedIds = new bytes21[](1);
+        feedIds[0] = ETH_USD_FEED_ID;
+        (uint256[] memory values, , ) = ftso.getFeedsById(feedIds);
+        return int256(values[0]);
     }
 
     function abs(int x) private pure returns (uint) {
