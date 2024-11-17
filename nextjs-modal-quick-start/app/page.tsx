@@ -270,6 +270,23 @@ function App() {
       Login
     </button>
   );
+  const buyOrder = () => {
+    const totalCost = data.lowerStrike + data.higherStrike; // Assuming the cost is proportional to the lots
+    if (totalCost > currentLiquidity) {
+      alert(
+        "Insufficient liquidity to place the order. Please add more liquidity."
+      );
+      return;
+    }
+
+    alert(
+      `Buy ${data.strikePrice} call ${data.lowerStrike.toFixed(
+        2
+      )} quantity and ${data.far} call ${data.higherStrike.toFixed(
+        2
+      )} quantity.`
+    );
+  };
 
   return (
     <div className="container">
@@ -387,6 +404,22 @@ function App() {
                   visualizations.
                 </p>
               )}
+            </div>
+            <div>
+              <div className="bg-gray-100 p-4 rounded-lg shadow-md">
+                <h3 className="text-lg font-semibold">Final Order</h3>
+                <p className="text-gray-700">
+                  Buy {data.strikePrice} call {data.lowerStrike.toFixed(2)}{" "}
+                  quantity and {data.far} call {data.higherStrike.toFixed(2)}{" "}
+                  quantity.
+                </p>
+                <button
+                  onClick={buyOrder}
+                  className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 mt-4"
+                >
+                  Buy
+                </button>
+              </div>
             </div>
           </div>
         </div>
